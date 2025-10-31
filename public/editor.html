@@ -67,62 +67,102 @@
     </div>
   </div>
 
-  <!-- Load the official Pixlr SDK software -->
-  <script src="https://sdk.pixlr.com/in-app/latest/pixlr-in-app.js"></script>
-
   <script>
-    // Initialize the SDK with your key
-    pixlr.inApp.init({
-      client: '85f9a9cf89a14efa89d4aa02b66b7cc5'
-    });
-
-    // Get info from the URL parameters
-    const urlParams = new URLSearchParams(window.location.search);
-    const imageUrl = urlParams.get('imageUrl');
-    const userId = urlParams.get('userId');
-    const postId = urlParams.get('postId');
-
-    // Construct the callback URL (you can update this to your backend endpoint)
-    const callbackUrl = window.location.origin + '/api/pixlr-callback' +
-                        '?userId=' + (userId || '') +
-                        '&postId=' + (postId || '');
-
-    // Configuration for the editor
-    const editorConfig = {
-      title: 'Edit Your Image',
-      postback: callbackUrl
-    };
-
-    // If an image URL is provided, load it in the editor
-    if (imageUrl) {
-      editorConfig.image = imageUrl;
+    // Function to show error message
+    function showError(message, details) {
+      document.querySelector('.container').innerHTML = `
+        <h1 style="color: #dc2626;">Error Loading Editor</h1>
+        <div class="info">
+          <p style="margin-bottom: 12px;"><strong>${message}</strong></p>
+          ${details ? `<p style="font-size: 14px; color: #9ca3af; margin-bottom: 12px;">${details}</p>` : ''}
+          <p>Please check:</p>
+          <ul style="text-align: left; color: #6b7280;">
+            <li>Your Pixlr Client ID is configured correctly</li>
+            <li>You have an active internet connection</li>
+            <li>Your browser allows third-party scripts and cookies</li>
+          </ul>
+          <p style="margin-top: 20px;">
+            <a href="/" style="color: #7c3aed; text-decoration: none; font-weight: 600;">
+              ← Return to Dashboard
+            </a>
+          </p>
+        </div>
+      `;
     }
 
-    // Show the editor when the page loads
-    // Give the SDK a moment to fully load
-    setTimeout(() => {
+    // Load the Pixlr SDK dynamically with error handling
+    function loadPixlrSDK() {
+      return new Promise((resolve, reject) => {
+        const script = document.createElement('script');
+        script.src = 'https://sdk.pixlr.com/in-app/latest/pixlr-in-app.js';
+        script.async = true;
+
+        script.onload = () => {
+          console.log('Pixlr SDK loaded successfully');
+          resolve();
+        };
+
+        script.onerror = () => {
+          console.error('Failed to load Pixlr SDK');
+          reject(new Error('Failed to load Pixlr SDK from CDN'));
+        };
+
+        document.head.appendChild(script);
+      });
+    }
+
+    // Main initialization function
+    async function initPixlrEditor() {
       try {
+        // Load the SDK first
+        await loadPixlrSDK();
+
+        // Wait a bit more for SDK to fully initialize
+        await new Promise(resolve => setTimeout(resolve, 500));
+
+        // Check if pixlr object exists
+        if (typeof pixlr === 'undefined') {
+          throw new Error('Pixlr SDK loaded but pixlr object is not available');
+        }
+
+        // Get info from the URL parameters
+        const urlParams = new URLSearchParams(window.location.search);
+        const imageUrl = urlParams.get('imageUrl');
+        const userId = urlParams.get('userId');
+        const postId = urlParams.get('postId');
+
+        // Initialize the SDK with your key
+        pixlr.inApp.init({
+          client: 'PASTE_YOUR_PIXLR_CLIENT_ID_HERE'
+        });
+
+        // Construct the callback URL
+        const callbackUrl = window.location.origin + '/api/pixlr-callback' +
+                            '?userId=' + (userId || '') +
+                            '&postId=' + (postId || '');
+
+        // Configuration for the editor
+        const editorConfig = {
+          title: 'Edit Your Image',
+          postback: callbackUrl
+        };
+
+        // If an image URL is provided, load it in the editor
+        if (imageUrl) {
+          editorConfig.image = imageUrl;
+        }
+
+        // Show the editor
         pixlr.overlay.show(editorConfig);
+
       } catch (error) {
-        console.error('Error loading Pixlr editor:', error);
-        document.querySelector('.container').innerHTML = `
-          <h1 style="color: #dc2626;">Error Loading Editor</h1>
-          <div class="info">
-            <p>There was an error loading the Pixlr editor. Please check:</p>
-            <ul style="text-align: left; color: #6b7280;">
-              <li>Your Pixlr Client ID is configured correctly</li>
-              <li>You have an active internet connection</li>
-              <li>Your browser allows third-party scripts</li>
-            </ul>
-            <p style="margin-top: 20px;">
-              <a href="/" style="color: #7c3aed; text-decoration: none; font-weight: 600;">
-                ← Return to Dashboard
-              </a>
-            </p>
-          </div>
-        `;
+        console.error('Error initializing Pixlr editor:', error);
+        showError(
+          'Unable to load the Pixlr editor',
+          error.message
+        );
       }
-    }, 500);
+    }
 
     // Handle editor close event
     window.addEventListener('message', function(event) {
@@ -131,6 +171,13 @@
         window.location.href = '/';
       }
     });
+
+    // Start loading when page is ready
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', initPixlrEditor);
+    } else {
+      initPixlrEditor();
+    }
   </script>
 
 </body>
