@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Pixlr Image Editor</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+      text-align: center;
+      padding-top: 50px;
+      background: linear-gradient(135deg, #f5f3ff 0%, #fce7f3 50%, #dbeafe 100%);
+      min-height: 100vh;
+      margin: 0;
+    }
+    .container {
+      max-width: 600px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+    h1 {
+      color: #7c3aed;
+      font-size: 2rem;
+      margin-bottom: 1rem;
+    }
+    .loading {
+      display: inline-block;
+      width: 50px;
+      height: 50px;
+      border: 5px solid #e5e7eb;
+      border-top: 5px solid #7c3aed;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin: 20px auto;
+    }
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    .info {
+      background: white;
+      border-radius: 12px;
+      padding: 20px;
+      margin-top: 20px;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+    .info p {
+      color: #6b7280;
+      line-height: 1.6;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <h1>Loading Pixlr Editor...</h1>
+    <div class="loading"></div>
+
+    <div class="info">
+      <p>The Pixlr image editor is loading. You can:</p>
+      <ul style="text-align: left; color: #6b7280;">
+        <li>Edit existing images</li>
+        <li>Create new designs from scratch</li>
+        <li>Apply AI-powered filters and effects</li>
+        <li>Resize images for different platforms</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- Load the official Pixlr SDK software -->
+  <script src="https://sdk.pixlr.com/in-app/latest/pixlr-in-app.js"></script>
+
+  <script>
+    // Initialize the SDK with your key
+    pixlr.inApp.init({
+      client: '85f9a9cf89a14efa89d4aa02b66b7cc5'
+    });
+
+    // Get info from the URL parameters
+    const urlParams = new URLSearchParams(window.location.search);
+    const imageUrl = urlParams.get('imageUrl');
+    const userId = urlParams.get('userId');
+    const postId = urlParams.get('postId');
+
+    // Construct the callback URL (you can update this to your backend endpoint)
+    const callbackUrl = window.location.origin + '/api/pixlr-callback' +
+                        '?userId=' + (userId || '') +
+                        '&postId=' + (postId || '');
+
+    // Configuration for the editor
+    const editorConfig = {
+      title: 'Edit Your Image',
+      postback: callbackUrl
+    };
+
+    // If an image URL is provided, load it in the editor
+    if (imageUrl) {
+      editorConfig.image = imageUrl;
+    }
+
+    // Show the editor when the page loads
+    // Give the SDK a moment to fully load
+    setTimeout(() => {
+      try {
+        pixlr.overlay.show(editorConfig);
+      } catch (error) {
+        console.error('Error loading Pixlr editor:', error);
+        document.querySelector('.container').innerHTML = `
+          <h1 style="color: #dc2626;">Error Loading Editor</h1>
+          <div class="info">
+            <p>There was an error loading the Pixlr editor. Please check:</p>
+            <ul style="text-align: left; color: #6b7280;">
+              <li>Your Pixlr Client ID is configured correctly</li>
+              <li>You have an active internet connection</li>
+              <li>Your browser allows third-party scripts</li>
+            </ul>
+            <p style="margin-top: 20px;">
+              <a href="/" style="color: #7c3aed; text-decoration: none; font-weight: 600;">
+                ← Return to Dashboard
+              </a>
+            </p>
+          </div>
+        `;
+      }
+    }, 500);
+
+    // Handle editor close event
+    window.addEventListener('message', function(event) {
+      if (event.data && event.data.type === 'pixlr-close') {
+        // Redirect back to the main app when editor closes
+        window.location.href = '/';
+      }
+    });
+  </script>
+
+</body>
+</html>
