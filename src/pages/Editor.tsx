@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase, Asset } from '../lib/supabase';
-import { ImageViewer } from '../components/ImageViewer';
 import {
   Palette,
   Upload,
@@ -13,7 +12,7 @@ import {
 
 export function Editor() {
   const { profile } = useAuth();
-  const [selectedAsset, setSelectedAsset] = useState<Asset | null>(null);
+  const [selectedImage, setSelectedImage] = useState<string>('');
   const [assets, setAssets] = useState<Asset[]>([]);
   const [loading, setLoading] = useState(false);
 
@@ -34,6 +33,15 @@ export function Editor() {
     } catch (error) {
       console.error('Error loading assets:', error);
     }
+  };
+
+  const openPixlrEditor = (imageUrl?: string) => {
+    const params = new URLSearchParams();
+    if (imageUrl) params.set('imageUrl', imageUrl);
+    if (profile?.id) params.set('userId', profile.id);
+
+    const editorUrl = `/editor.html?${params.toString()}`;
+    window.open(editorUrl, '_blank', 'width=1200,height=800');
   };
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -175,8 +183,14 @@ export function Editor() {
               <ImageIcon className="w-16 h-16 text-gray-300 mx-auto mb-4" />
               <p className="text-gray-600 mb-2">No assets yet</p>
               <p className="text-sm text-gray-500 mb-4">
-                Upload images to get started
+                Upload images or create new designs with Pixlr
               </p>
+              <button
+                onClick={() => openPixlrEditor()}
+                className="text-purple-600 hover:text-purple-700 font-medium"
+              >
+                Create your first design
+              </button>
             </div>
           ) : (
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -184,7 +198,7 @@ export function Editor() {
                 <div
                   key={asset.id}
                   className="group relative aspect-square bg-gray-100 rounded-lg overflow-hidden border border-gray-200 hover:border-purple-300 transition-colors cursor-pointer"
-                  onClick={() => setSelectedAsset(asset)}
+                  onClick={() => asset.url && openPixlrEditor(asset.url)}
                 >
                   {asset.url ? (
                     <img
@@ -200,7 +214,7 @@ export function Editor() {
                   <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-40 transition-all flex items-center justify-center">
                     <div className="opacity-0 group-hover:opacity-100 transition-opacity">
                       <div className="bg-white rounded-lg px-3 py-2 text-sm font-medium text-gray-900">
-                        View & Edit
+                        Edit in Pixlr
                       </div>
                     </div>
                   </div>
@@ -223,28 +237,17 @@ export function Editor() {
         <div className="flex gap-3">
           <AlertCircle className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" />
           <div className="text-sm text-yellow-900">
-            <p className="font-medium mb-1">How It Works</p>
+            <p className="font-medium mb-1">Setup Required</p>
             <p>
-              Click any image to open it in the viewer. Then click "Edit in Pixlr" to open the Pixlr web editor.
-              After editing and saving, the image will automatically update in your library.
+              To use the Pixlr editor, you need to add your Pixlr Client ID in the <code className="bg-yellow-100 px-1 rounded">editor.html</code> file.
+              Replace <code className="bg-yellow-100 px-1 rounded">PASTE_YOUR_PIXLR_CLIENT_ID_HERE</code> with your actual client ID from{' '}
+              <a href="https://pixlr.com/developer/" target="_blank" rel="noopener noreferrer" className="underline font-medium">
+                pixlr.com/developer
+              </a>
             </p>
           </div>
         </div>
       </div>
-
-      {selectedAsset && selectedAsset.url && (
-        <ImageViewer
-          imageUrl={selectedAsset.url}
-          imageId={selectedAsset.id}
-          imageTitle={selectedAsset.title || 'Untitled'}
-          onClose={() => setSelectedAsset(null)}
-          onImageUpdated={(newUrl) => {
-            setAssets(assets.map(a =>
-              a.id === selectedAsset.id ? { ...a, url: newUrl, generated_by_ai: true } : a
-            ));
-          }}
-        />
-      )}
     </div>
   );
 }
